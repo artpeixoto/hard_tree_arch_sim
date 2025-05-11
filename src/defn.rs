@@ -1,14 +1,15 @@
+use std::array;
 use std::collections::hash_map::Keys;
-use std::ops::Sub;
+use std::ops::{Not, Sub};
 use std::sync::LazyLock;
 use rust_hdl::prelude::*;
+use rust_hdl::widgets::edge_ff::EdgeDFF;
 
 pub const ALU_INDEX_SIGNAL_SIZE: usize = 5;
 pub const ALU_COUNT			 : usize = 2_usize.pow(ALU_INDEX_SIGNAL_SIZE as u32);
 
 pub const REGISTER_INDEX_SIGNAL_SIZE: usize = 6;
 pub const REGISTER_COUNT	 : usize = 2_usize.pow(REGISTER_INDEX_SIGNAL_SIZE as u32);
-
 pub const INSTRUCTION_SIZE   : usize = 64;
 
 pub const DATA_SIZE: usize = 32;
@@ -62,21 +63,28 @@ impl ToBits for ControllerCmd{
 
 pub type DataWord 					= Bits<DATA_SIZE>;
 pub type AluIndex					= Bits<ALU_INDEX_SIGNAL_SIZE>;
-pub type AluIndexPort<Dir>			= Signal<Dir, Bits<ALU_INDEX_SIGNAL_SIZE>>;
+pub type AluIndexSignal<Dir>		= Signal<Dir, Bits<ALU_INDEX_SIGNAL_SIZE>>;
 pub type RegisterIndex  			= Bits<REGISTER_INDEX_SIGNAL_SIZE>;
 pub type RegisterIndexSignal<Dir>  	= Signal<Dir, Bits<REGISTER_INDEX_SIGNAL_SIZE>>;
 
-pub static PROGRAM_COUNTER_REGISTER			: LazyLock<RegisterIndex> = LazyLock::new(||Bits::from(63));
-pub static STACK_POINTER_REGISTER  			: LazyLock<RegisterIndex> = LazyLock::new(||Bits::from(62));
-pub static RETURN_POINTER_REGISTER  		: LazyLock<RegisterIndex> = LazyLock::new(||Bits::from(61));
+pub static PROGRAM_COUNTER_REGISTER	: LazyLock<RegisterIndex> = LazyLock::new(||Bits::from(63));
+pub static STACK_POINTER_REGISTER  	: LazyLock<RegisterIndex> = LazyLock::new(||Bits::from(62));
+pub static RETURN_POINTER_REGISTER  : LazyLock<RegisterIndex> = LazyLock::new(||Bits::from(61));
 
 
 #[derive(Clone, PartialEq, Eq, Debug, Copy, Default)]
 pub struct AluConfig{
 	execution_signal_input	: RegisterIndex,
 	execution_signal_output	: RegisterIndex,
+
+	data_input_0			: RegisterIndex,
+	data_input_1			: RegisterIndex,
+
+	main_data_output		: RegisterIndex,
+	aux_data_output			: RegisterIndex,
 	operation				: AluOperation
 }
+
 impl Synth for AluConfig{
 	const BITS: usize = 48;
 
@@ -95,126 +103,169 @@ impl Synth for AluConfig{
 
 pub const ALU_CONFIG_SIGNAL_SIZE: usize = AluConfig::BITS;
 
-pub type AluConfigSignal<Dir> = Signal<Dir, Bits<ALU_CONFIG_SIGNAL_SIZE>>;
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Default, LogicStruct)]
-pub struct AddOperation{
-	first_operand_input		: RegisterIndex,
-	second_operand_input	: RegisterIndex,
-	output					: RegisterIndex,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum IntOperation{
-	Add{
-		first_operand_input		: RegisterIndex,
-		second_operand_input	: RegisterIndex,
-		output					: RegisterIndex,
-		flags_output			: RegisterIndex,
-	},
-	Sub{
-		first_operand_input		: RegisterIndex,
-		second_operand_input	: RegisterIndex,
-		output					: RegisterIndex,
-		flags_output			: RegisterIndex,
-	}
-	// Mul{
-	// 	first_operand_input		: RegisterIndex,
-	// 	second_operand_input	: RegisterIndex,
-	// 	output					: RegisterIndex,
-	// },
-	// Div{
-	// 	first_operand_input		: RegisterIndex,
-	// 	second_operand_input	: RegisterIndex,
-	// 	output					: RegisterIndex,
-	// },
-	// Rem{
-	// 	first_operand_input		: RegisterIndex,
-	// 	second_operand_input	: RegisterIndex,
-	// 	output					: RegisterIndex,
-	// },
-	// Neg{
-	// 	operand_input			: RegisterIndex,
-	// 	output					: RegisterIndex,
-	// }
-}
-#[derive(Clone, PartialEq, Eq, Debug, Copy)]
-pub enum LogicOperation {
-	Not{
-		input					: RegisterIndex,
-		output					: RegisterIndex,
-	},
-	And{
-		first_operand_input		: RegisterIndex,
-		second_operand_input	: RegisterIndex,
-		output					: RegisterIndex,
-	},
-	Or{
-		first_operand_input		: RegisterIndex,
-		second_operand_input	: RegisterIndex,
-		output					: RegisterIndex,
-	},
-	Shift{
-		count_input				: RegisterIndex,
-		output					: RegisterIndex,
-	},
-	Any{
-		operand_input			: RegisterIndex,
-		output					: RegisterIndex,
-	},
-	SelectBit{
-		operand_input			: RegisterIndex,
-		bit_index				: Bits<{clog2(DATA_SIZE)}>, //32 bits
-		output					: RegisterIndex,
-	}
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum MemIoOperation{
-	ReadFromMem {
-		memory_location_input   : RegisterIndex,
-		data_output				: RegisterIndex,
-	},
-	WriteToMem {
-		memory_location_input	: RegisterIndex,
-		data_input				: RegisterIndex,
-	},
-}
+pub type AluConfigSignal<Dir> = Signal<Dir, AluConfig>;
 
 #[derive(Clone, PartialEq, Eq, Debug, Copy, Default)]
 pub enum AluOperation{
 	#[default]
 	NoOp,
-	MemIo(MemIoOperation),
-	Logic(LogicOperation),
-	Int(IntOperation),
-	Eq{
-		first_operand_input		: RegisterIndex,
-		second_operand_input	: RegisterIndex,
-		output					: RegisterIndex,
-	}
-	,
+
+	ReadFromMem,
+	WriteToMem,
+
+	Not,
+	And,
+	Or,
+	BitShift,
+	Any,
+	SelectBit,
+
+	Add,
+	Sub,
+	Mul,
+	Div,
+	Rem,
+	Neg,
+
+	Eq,
 }
 
 pub struct Controller{
 
 }
 
-pub struct Alu{
-	set_config_input_signal	: Signal<In, Bit>,
-	config_input_signal		: AluConfigSignal<In>,
-	config					: DFF<AluConfig>,
-
-	clock					: Signal<In, Clock>,
-
-	data_input_0			: Signal<In, DataWord>,
-	data_input_1			: Signal<In, DataWord>,
-
-	activation_input		: Signal<In, Bit>,
-
-	data_output				: Signal<In, DataWord>,
-	flags_output			: Signal<In, Bits<12>>,
-	activation_output		: Signal<Out, Bit>,
+#[derive(LogicBlock)]
+pub struct Registers {
+	clock		: Signal<In, Clock>,
+	registers	: [DFF<DataWord>; REGISTER_COUNT]
+}
+impl Logic for Registers{
+	fn update(&mut self) {
+		for  i in 0..REGISTER_COUNT {
+			let reg = &mut self.registers[i];
+			reg.clock.next = self.clock.val();
+			reg.d.next = reg.q.val();
+		}
+	}
 }
 
-impl
+impl Registers{
+	pub fn get_reader(&mut self) -> RegisterDataReader {
+		let mut register_inputs =
+			array::from_fn::< Signal<In, DataWord>, REGISTER_COUNT,_>(|_| Default::default());
+		for i in 0..REGISTER_COUNT {
+			self.registers[i].q.join(&mut register_inputs[i])
+		}
+
+		RegisterDataReader {
+			registers: register_inputs,
+			enable: Default::default(),
+			register_index: Default::default(),
+			out: Default::default(),
+		}
+	}
+}
+
+#[derive(LogicBlock)]
+pub struct RegisterDataReader {
+	register_index 	: Signal<In, RegisterIndex>,
+	enable			: Signal<In, bool>,
+	registers		: [Signal<In, DataWord>; REGISTER_COUNT],
+	out				: Signal<Out, DataWord>,
+}
+
+impl Logic for RegisterDataReader {
+	#[hdl_gen]
+	fn update(&mut self) {
+		if self.enable.val(){
+			self.out.next = self.registers[self.register_index.val().index()].val();
+		}
+	}
+}
+#[derive(LogicBlock)]
+pub struct RegisterActivationReader {
+	register_index 	: Signal<In, RegisterIndex>,
+	enable			: Signal<In, bool>,
+	registers		: [Signal<In, DataWord>; REGISTER_COUNT],
+	out				: Signal<Out, Bit>,
+}
+impl Logic for RegisterActivationReader {
+	fn update(&mut self) {
+		todo!()
+	}
+}
+
+#[derive(LogicBlock)]
+pub struct RegisterDataWriter{
+	enable			: Signal<In, bool>,
+	register_index	: Signal<In, RegisterIndex>,
+	registers		: [Signal<Out, DataWord>; REGISTER_COUNT],
+	input			: Signal<In, DataWord>,
+}
+impl Logic for RegisterDataWriter{
+	#[hdl_gen]
+	fn update(&mut self) {
+	}
+}
+#[derive(LogicBlock)]
+pub struct AluConfigMem{
+	clock					: Signal<In, Clock>,
+	alu_change_config_input	: Signal<In, bool>,
+	alu_config_input		: Signal<In, AluConfig>,
+	alu_config				: DFF<AluConfig>,
+
+	output					: Signal<Out, AluConfig>,
+	is_ready				: Signal<Out, bool>,
+}
+impl Logic for AluConfigMem{
+	fn update(&mut self) {
+		dff_setup!(self, clock, alu_config );
+
+		if self.clock.pos_edge() {
+			self.alu_config.d.next = self.alu_change_config_input.val();
+		}
+	}
+	
+}
+#[derive(LogicBlock)]
+pub struct AluCore {
+	clock					: Signal<In, Clock>,
+
+	data_input_0			: RegisterDataReader,
+	data_input_1			: RegisterDataReader,
+	activation_input		: RegisterActivationReader,
+
+	main_data_output		: RegisterDataWriter,
+	aux_data_output			: RegisterDataWriter,
+	
+	activation_output		: Signal<Out, Bit>,
+}
+#[derive(LogicBlock)]
+pub struct RegisterActivationWriter{
+}
+impl Logic for  RegisterActivationWriter{
+	fn update(&mut self) {
+		todo!()
+	}
+}
+
+impl Logic for AluCore {
+	#[hdl_gen]
+	fn update(&mut self) {
+
+		// reset everything
+		self.data_input_0.enable.next = false;
+		self.data_input_1.enable.next = false;
+
+		if self.alu_change_config_input.val() {
+			self.alu_config.clock.next 	= self.clock.val();
+			self.alu_config.d.next 		= self.alu_config_input.val();
+		} else if self.activation_input.val() {
+
+		} else {
+			//in this case, nothing happens, but we should ensure everything is down.
+
+		}
+	}
+}
+
