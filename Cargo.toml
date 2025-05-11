@@ -1,0 +1,8 @@
+[package]
+name = "soldiers"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rust-hdl = "0.46.0"
+structstruck = "0.5.0"
