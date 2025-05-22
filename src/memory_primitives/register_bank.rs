@@ -11,6 +11,17 @@ pub struct RegisterBank<Data: Synth, const ADDR_SIZE: usize, const COUNT: usize>
     _phantom        : PhantomData<[(); ADDR_SIZE]>,
 }
 
+impl<Data: Synth, const ADDR_SIZE: usize, const COUNT: usize> RegisterBank<Data, ADDR_SIZE, COUNT> {
+    pub fn new(clock: Signal<In, Clock>) -> Self{
+        let registers    = 
+            Box::new(array::from_fn(|_| Register::new(clock.clone())));
+        Self{
+            clock,
+            registers,
+            _phantom: Default::default(),
+        }
+    }
+}
 
 impl<Data: Synth, const ADDR_LEN: usize, const COUNT: usize>
     Logic for RegisterBank<Data, ADDR_LEN, COUNT>

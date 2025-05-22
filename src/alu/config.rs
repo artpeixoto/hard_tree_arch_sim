@@ -1,11 +1,10 @@
 use rust_hdl::prelude::*;
-use crate::{cpu_registers::CpuRegistersAddress, memory_primitives::{register::{RegisterReader, RegisterWriter}, register_bank::RegisterBank}};
+use crate::{instruction::TakeBits, cpu_registers::{CpuRegistersAddress, CPU_REGISTERS_ADDR_SIZE}, memory_primitives::{register::{RegisterReader, RegisterWriter}, register_bank::RegisterBank}};
 
 use super::{core::AluOperation};
 pub const ALU_COUNT			 		: usize = 32;
-pub const ALU_ADDR_SIZE		        : usize = clog2(ALU_COUNT);
-pub type AluAddr					= Bits<ALU_ADDR_SIZE>;
-
+pub const ALU_ADDR_SIZE		    : usize = clog2(ALU_COUNT);
+pub type AluAddr				= Bits<ALU_ADDR_SIZE>;
 pub type AluConfigReader 		= RegisterReader<AluConfig>;
 
 #[derive(Clone, PartialEq, Eq, Debug, Copy, Default,LogicStruct )]
@@ -16,10 +15,36 @@ pub struct AluConfig {
     pub data_input_1			: CpuRegistersAddress,
     pub main_data_output		: CpuRegistersAddress,
     pub aux_data_output			: CpuRegistersAddress,
-    pub operation				: AluOperation,
     pub aux_output_activated	: bool,
+    pub operation				: AluOperation,
 }
+impl<'a> Into<AluConfig> for &'a [bool]{
+	fn into(self) -> AluConfig {
+		if self.len() != AluConfig::BITS {
+			panic!()
+		}
+		let mut arr = &self[..];
+		let execution_signal_input = arr.take_bits();
+		let execution_signal_output = arr.take_bits();
+		let data_input_0 = arr.take_bits();
+		let data_input_1 = arr.take_bits();
+		let main_data_output = arr.take_bits();
+		let aux_data_output  = arr.take_bits();
+		let aux_output_activated  = arr.take_bits::<1>().into();
+		let operation 	= arr.take_bits::<{AluOperation::BITS}>().into();
 
+		AluConfig{
+			execution_signal_input,
+			execution_signal_output,
+			data_input_0,
+			data_input_1,
+			main_data_output,
+			aux_data_output,
+			aux_output_activated,
+			operation,
+		}
+	}
+}
 
 pub const ALU_CONFIG_SIGNAL_SIZE: usize
     = (6 * CpuRegistersAddress::BITS)  	// 6 ios
@@ -58,13 +83,13 @@ pub struct AluBankConfigurator{
 
 
 impl Logic for AluBankConfigurator{
+	#[hdl_gen]
     fn update(&mut self) {
 		for i in 0..ALU_COUNT{
 			self.inner_writers[i].write_enable.next = false;
 		}
-
 		if self.write_enable.val() {
-			if self.target_all.val(){
+			if self.target_all.val() {
 				for i in 0..ALU_COUNT{
 					self.inner_writers[i].write_value.next = self.config_value.val();
 					self.inner_writers[i].write_enable.next = true;

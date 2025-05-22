@@ -3,10 +3,21 @@ use rust_hdl::{prelude::*, widgets::edge_ff::EdgeDFF};
 
 #[derive(LogicBlock)]
 pub struct Register<Data: Synth>{
-	pub clock: Signal<In, Clock>,
+	pub clock	: Signal<In, Clock>,
 	write_enable: Signal<InOut, Bit>,
-	write_value: Signal<InOut, Data>,
-	inner: EdgeDFF<Data>,
+	write_value	: Signal<InOut, Data>,
+	inner		: EdgeDFF<Data>,
+}
+
+impl<Data: Synth> Register<Data> {
+	pub fn new(clock: Signal<In, Clock>)  -> Self {
+		Self{
+			clock,
+			write_enable: Default::default(),
+			write_value	: Default::default(),
+			inner		: Default::default(),
+		}
+	}
 }
 
 impl<Data: Synth> Logic for Register<Data>{

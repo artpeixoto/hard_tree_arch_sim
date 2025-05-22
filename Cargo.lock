@@ -98,6 +98,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0a5c400df2834b80a4c3327b3aad3a4c4cd4de0629063962b03235697506a28"
 
 [[package]]
+name = "either"
+version = "1.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
+
+[[package]]
 name = "embed-doc-image"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -152,6 +158,15 @@ checksum = "cea70ddb795996207ad57735b50c5982d8844f38ba9ee5f1aedcfb708a2aa11e"
 dependencies = [
  "equivalent",
  "hashbrown",
+]
+
+[[package]]
+name = "itertools"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
+dependencies = [
+ "either",
 ]
 
 [[package]]
@@ -293,8 +308,6 @@ checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 [[package]]
 name = "rust-hdl"
 version = "0.46.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84560a2d65ebb53503a69b01bf025cd8e2efc1a249a806c056b328583f97bc23"
 dependencies = [
  "anyhow",
  "array-init",
@@ -320,8 +333,6 @@ dependencies = [
 [[package]]
 name = "rust-hdl-core"
 version = "0.46.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43d13c73d1770efdab42789e0ebe857f95d89f2a6a0d23f963bc8b6ec5c63b45"
 dependencies = [
  "anyhow",
  "array-init",
@@ -335,6 +346,7 @@ dependencies = [
  "regex",
  "rust-hdl-macros",
  "seq-macro",
+ "serde",
  "substring",
  "svg",
  "vcd",
@@ -343,8 +355,6 @@ dependencies = [
 [[package]]
 name = "rust-hdl-hls"
 version = "0.46.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fcc9ae5db14cc7ffd07a4f2c6df748ab1ff65345746020621af341f346ef8b37"
 dependencies = [
  "array-init",
  "rand",
@@ -355,8 +365,6 @@ dependencies = [
 [[package]]
 name = "rust-hdl-macros"
 version = "0.46.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3691898fe7f436e605176dc3ee2e0fd832852fa479758781e3f827bf3701b121"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -367,8 +375,6 @@ dependencies = [
 [[package]]
 name = "rust-hdl-sim"
 version = "0.46.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95538d704a43fd69937453b39aa2d3345cc9c4034a5b5eb6c81d176e63223864"
 dependencies = [
  "array-init",
  "rust-hdl-core",
@@ -378,8 +384,6 @@ dependencies = [
 [[package]]
 name = "rust-hdl-widgets"
 version = "0.46.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47ad174eeba9c57b08a4dc0de381ce76b3f3607f41216b45b3ec93e7177f1e36"
 dependencies = [
  "array-init",
  "rust-hdl-core",
@@ -392,11 +396,34 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1bc711410fbe7399f390ca1c3b60ad0f53f80e95c5eb935e52268a0e2cd49acc"
 
 [[package]]
+name = "serde"
+version = "1.0.219"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f0e2c6ed6606019b4e29e69dbaba95b11854410e5347d525002456dbbb786b6"
+dependencies = [
+ "serde_derive",
+]
+
+[[package]]
+name = "serde_derive"
+version = "1.0.219"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b0276cf7f2c73365f7157c8123c21cd9a50fbbd844757af28ca1f5925fc2a00"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.101",
+]
+
+[[package]]
 name = "soldiers"
 version = "0.1.0"
 dependencies = [
+ "either",
+ "itertools",
  "rust-hdl",
  "structstruck",
+ "vcd",
 ]
 
 [[package]]
