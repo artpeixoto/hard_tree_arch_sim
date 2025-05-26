@@ -2,7 +2,6 @@ use crate::instruction_reader::InstructionMemory;
 use crate::memory_primitives::register_bank::RegisterBankWriter;
 use crate::{
     cpu_registers::CpuRegisterAddress,
-    instruction::TakeBits,
     memory_primitives::{
         register::{RegisterReader, RegisterWriter},
         register_bank::RegisterBank,

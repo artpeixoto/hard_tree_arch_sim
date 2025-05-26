@@ -24,8 +24,8 @@ impl MainMemory{
 }
 impl ClockTransition for MainMemory{
     fn step(&mut self, step: &Step) {
-        for r in self.0.iter_mut() {
-            r.step(step);
+        for r in self.0.iter() {
+            r.transition();
         }
     }
 }

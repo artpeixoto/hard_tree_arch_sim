@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use std::ops::{Deref};
-use bevy::render::render_resource::AddressMode;
 use itertools::Itertools;
 use crate::{ClockTransition, Step};
 use crate::cpu_registers::CpuRegisterAddress;
@@ -12,8 +11,8 @@ pub struct RegisterBank<Data, const COUNT: usize> {
 }
 
 impl<Data, const COUNT: usize> ClockTransition for RegisterBank<Data, COUNT>{
-    fn step(&mut self, step: &Step) {
-        self.registers.iter_mut().for_each(|reg| {reg.step(step)})
+    fn step(&mut self, _step: &Step) {
+        self.registers.iter().for_each(|reg| {reg.transition()})
     }
 }
 impl<Data, const COUNT: usize> RegisterBank<Data, { COUNT }> {

@@ -23,7 +23,7 @@ impl CpuActivationReader {
         }
     }
     pub fn read<'a>(&self, addr: usize) -> bool{
-        self.inner.read(addr) != 0
+        *self.inner.read(addr) != 0
     }
 }
 
@@ -33,14 +33,12 @@ pub struct CpuActivationWriter {
 
 impl CpuActivationWriter {
     pub fn new(writer: CpuRegisterBankWriter) -> Self{
-        Self {
-            inner   : writer
-        }
+        Self { inner   : writer }
     }
     pub fn write(&mut self,  value: bool, address: CpuRegisterAddress,) {
         self.inner.write(
             match value{
-                true    => {0xFF_FF_FF_FF}
+                true    => {!0}
                 false   => {0}
             },
             address

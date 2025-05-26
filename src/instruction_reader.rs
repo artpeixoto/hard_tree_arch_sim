@@ -2,7 +2,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 use bevy::ecs::relationship::Relationship;
 use bevy::prelude::Component;
-use crate::{instruction::{Instruction, CONTROLLER_INSTRUCTION_SIZE}, cpu_registers::{CpuRegisterBankReader, CpuRegisterBankWriter, CpuRegisterReader, CpuRegisterWriter}, main_memory::{MainMemory}, memory_primitives::register::RegisterReader, PROGRAM_COUNTER_REGISTER_ADDR};
+use crate::{instruction::{Instruction, CONTROLLER_INSTRUCTION_SIZE}, cpu_registers::{CpuRegisterReader, CpuRegisterWriter}, main_memory::{MainMemory}, memory_primitives::register::RegisterReader, PROGRAM_COUNTER_REGISTER_ADDR, ClockTransition, Step};
 use crate::cpu_registers::CpuRegisterBank;
 use crate::main_memory::MainMemoryIo;
 
@@ -29,6 +29,7 @@ pub struct InstructionReader{
 	instruction_memory		: Arc<Vec<Instruction>>,
 }
 
+
 impl InstructionReader{
 	pub fn new (
 		instruction_memory	: &InstructionMemory,
@@ -50,12 +51,14 @@ impl InstructionReader{
 		self.increment_cmd = cmd;
 	}
 
-	pub fn step(&mut self) {
-		todo!()
-	}
 	pub fn get_current_instruction<'a>(&'a self) -> impl Deref<Target=Instruction> + 'a{
 		let addr = *self.program_counter_reader.read() as usize;
 		self.instruction_memory.get(addr).unwrap()
 	}
 }
 
+impl ClockTransition for InstructionReader{
+	fn step(&mut self, step: &Step) {
+		todo!()
+	}
+}

@@ -11,9 +11,8 @@ pub struct Register<Data>{
 	value		: Arc<RwLock<Data>>,
 }
 
-
-impl<Data> ClockTransition for Register<Data>{
-	fn step(&mut self, _step: &Step) {
+impl <Data> Register<Data>{
+	pub fn transition(&self){
 		if let Some(value) = self.next_value.write().unwrap().take() {
 			*self.value.write().unwrap() = value;
 		}
@@ -25,7 +24,7 @@ impl<Data> Register<Data>{
 		self.value.read().unwrap()
 	}
 
-	pub fn write<'a>(&'a self, new_value:  Data) {
+	pub fn write(&self, new_value:  Data) {
 		self.next_value.write().unwrap().replace(new_value);
 	}
 

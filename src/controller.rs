@@ -9,8 +9,7 @@ use crate::main_memory::MainMemory;
 #[derive( PartialEq, Eq, Copy, Clone, Debug, )]
 pub enum ControllerState{
 	Ready,
-	Working,
-	Done,
+	Waiting,
 }
 
 pub struct Controller{
@@ -34,14 +33,14 @@ impl Controller{
 			main_memory,	
 		);
 			
-		let configurator = alu_config_bank.get_configurator();
+		let configurator = alu_config_bank.get_writer();
 			
 		Controller{
 			cpu_registers_reader: cpu_registers.get_reader(),
 			cpu_registers_writer: cpu_registers.get_writer(),
 			alu_bank_configurator: configurator,
 			instruction_reader,
-			state: Default::default(),
+			state: ControllerState::Ready
 		}	
 	}
 }
