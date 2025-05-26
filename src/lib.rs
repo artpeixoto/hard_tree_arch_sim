@@ -9,25 +9,15 @@ pub mod controller;
 pub mod word;
 pub mod instruction_reader;
 pub mod main_memory;
-pub mod tools;
 mod cpu;
+mod sim;
 
-use std::{array, ops::BitOr};
-use std::sync::LazyLock;
-use alu::{AluAddr, AluConfig};
-use instruction::ControllerInstruction;
-use cpu_registers::{CpuRegistersAddress, CpuRegisterBankReader};
-use memory_primitives::register_bank::{RegisterBank, RegisterBankReader, RegisterBankWriter};
-use rust_hdl::prelude::*;
-use word::{ToWord, Word};
 
 
 pub const PROGRAM_COUNTER_REGISTER_ADDR: usize = 63;
-// pub static STACK_POINTER_REGISTER  	
-//     : LazyLock<CpuRegistersAddress> = LazyLock::new(||Bits::from(62));
-// pub static RETURN_POINTER_REGISTER  
-//     : LazyLock<CpuRegistersAddress> = LazyLock::new(||Bits::from(61));
 
 
-
-
+pub type Step = u32;
+pub trait ClockTransition {
+	fn step(&mut self, step: &Step);
+}

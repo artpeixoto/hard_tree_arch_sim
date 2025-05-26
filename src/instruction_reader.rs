@@ -1,81 +1,61 @@
-use rust_hdl::prelude::*;
-
-use crate::{instruction::{ControllerInstruction, CONTROLLER_INSTRUCTION_SIZE}, cpu_registers::{CpuRegisterBankReader, CpuRegisterBankWriter, CpuRegisterReader, CpuRegisterWriter}, main_memory::{MainMemory, MainMemoryReader}, memory_primitives::register::RegisterReader, word::ToWord, PROGRAM_COUNTER_REGISTER_ADDR};
+use std::ops::Deref;
+use std::sync::Arc;
+use bevy::ecs::relationship::Relationship;
+use bevy::prelude::Component;
+use crate::{instruction::{Instruction, CONTROLLER_INSTRUCTION_SIZE}, cpu_registers::{CpuRegisterBankReader, CpuRegisterBankWriter, CpuRegisterReader, CpuRegisterWriter}, main_memory::{MainMemory}, memory_primitives::register::RegisterReader, PROGRAM_COUNTER_REGISTER_ADDR};
 use crate::cpu_registers::CpuRegisterBank;
-use crate::tools::sign::SignedCast;
-use crate::tools::to_i32::ToI32;
-use crate::word::WORD_SIZE;
+use crate::main_memory::MainMemoryIo;
 
-#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Clone, Copy, LogicState)]
+#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Clone, Copy)]
 pub enum IncrementCmd{
 	NoIncrement,
 	Increment,
 	GoTo,
 }
-
-#[derive(LogicBlock)]
+#[derive(Component)]
+pub struct InstructionMemory(
+	pub Arc<Vec<Instruction>>,
+);
+impl InstructionMemory{
+	pub fn new(program: Vec<Instruction>) -> Self {
+		Self(Arc::new(program))
+	}
+}
 pub struct InstructionReader{
-	pub increment			: Signal<In, IncrementCmd>,
-	pub increment_amount	: Signal<In, Bits<{ WORD_SIZE }>>,
-
-	pub instruction			: Signal<Out, ControllerInstruction>,
-
 	program_counter_reader	: CpuRegisterReader,
 	program_counter_writer  : CpuRegisterWriter,
-
-	first_word_reader		: MainMemoryReader,
-	second_word_reader		: MainMemoryReader,
+	data_memory				: MainMemoryIo,
+	increment_cmd			: IncrementCmd,
+	instruction_memory		: Arc<Vec<Instruction>>,
 }
 
 impl InstructionReader{
-	pub fn new(
-		cpu_registers	: &mut CpuRegisterBank,
-		main_memory		: &mut MainMemory,
-	) -> InstructionReader{
+	pub fn new (
+		instruction_memory	: &InstructionMemory,
+		cpu_registers		: &mut CpuRegisterBank,
+		main_memory			: &mut MainMemory,
+	) -> InstructionReader {
 		Self{
-			increment				: Default::default(),
-			increment_amount		: Default::default(),
-			instruction				: Default::default(),
+			instruction_memory		: instruction_memory.0.clone(),
 			program_counter_reader	: cpu_registers.get_specific_reader(PROGRAM_COUNTER_REGISTER_ADDR),
 			program_counter_writer	: cpu_registers.get_specific_writer(PROGRAM_COUNTER_REGISTER_ADDR),
-			first_word_reader		: main_memory.get_reader(),
-			second_word_reader		: main_memory.get_reader(),
+			increment_cmd			: IncrementCmd::NoIncrement,
+			data_memory				: main_memory.get_io()
 		}
 	}
 }
 
-impl Logic for InstructionReader{
-	// #[hdl_gen]
-	fn update(&mut self) {
-		self.first_word_reader.address.next = self.program_counter_reader.value.val().into();
-		self.second_word_reader.address.next = ((self.program_counter_reader.value.val().inner + 1));
+impl InstructionReader{
+	pub fn set_increment_cmd(&mut self, cmd: IncrementCmd){
+		self.increment_cmd = cmd;
+	}
 
-		match self.increment.val(){
-			IncrementCmd::NoIncrement => {
-				self.program_counter_writer.write_enable.next = false;
-			},
-			IncrementCmd::Increment => {
-				self.program_counter_writer.write_enable.next = true;
-				self.program_counter_writer.write_value.next =
-					(	2 * self.increment_amount.val().to_i32()
-
-						+ self.program_counter_reader.value.val().to_i32()
-					)
-					.to_word()
-				;
-			},
-			IncrementCmd::GoTo => {
-				self.program_counter_writer.write_enable.next = true;
-				self.program_counter_writer.write_value.next =
-					(2 * self.increment_amount.val().to_i32()).to_word();
-			},
-		}
-
-		self.instruction.next =
-			( (bit_cast::<CONTROLLER_INSTRUCTION_SIZE, 32>(self.first_word_reader.value.val().inner) << 32)
-			| (bit_cast::<CONTROLLER_INSTRUCTION_SIZE, 32>(self.second_word_reader.value.val().inner))
-			)
-			.into();
+	pub fn step(&mut self) {
+		todo!()
+	}
+	pub fn get_current_instruction<'a>(&'a self) -> impl Deref<Target=Instruction> + 'a{
+		let addr = *self.program_counter_reader.read() as usize;
+		self.instruction_memory.get(addr).unwrap()
 	}
 }
 

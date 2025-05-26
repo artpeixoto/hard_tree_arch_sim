@@ -1,103 +1,432 @@
-use rust_hdl::prelude::*;
-use crate::{instruction::TakeBits, cpu_registers::{CpuRegistersAddress, CPU_REGISTERS_ADDR_SIZE}, memory_primitives::{register::{RegisterReader, RegisterWriter}, register_bank::RegisterBank}};
+use crate::instruction_reader::InstructionMemory;
+use crate::memory_primitives::register_bank::RegisterBankWriter;
+use crate::{
+    cpu_registers::CpuRegisterAddress,
+    instruction::TakeBits,
+    memory_primitives::{
+        register::{RegisterReader, RegisterWriter},
+        register_bank::RegisterBank,
+    },
+};
 
-use super::{core::AluOperation};
-pub const ALU_COUNT			 		: usize = 32;
-pub const ALU_ADDR_SIZE		    : usize = clog2(ALU_COUNT);
-pub type AluAddr				= Bits<ALU_ADDR_SIZE>;
-pub type AluConfigReader 		= RegisterReader<AluConfig>;
-
-#[derive(Clone, PartialEq, Eq, Debug, Copy, Default,LogicStruct )]
-pub struct AluConfig {
-    pub execution_signal_input	: CpuRegistersAddress,
-    pub execution_signal_output	: CpuRegistersAddress,
-    pub data_input_0			: CpuRegistersAddress,
-    pub data_input_1			: CpuRegistersAddress,
-    pub main_data_output		: CpuRegistersAddress,
-    pub aux_data_output			: CpuRegistersAddress,
-    pub aux_output_activated	: bool,
-    pub operation				: AluOperation,
-}
-impl<'a> Into<AluConfig> for &'a [bool]{
-	fn into(self) -> AluConfig {
-		if self.len() != AluConfig::BITS {
-			panic!()
-		}
-		let mut arr = &self[..];
-		let execution_signal_input = arr.take_bits();
-		let execution_signal_output = arr.take_bits();
-		let data_input_0 = arr.take_bits();
-		let data_input_1 = arr.take_bits();
-		let main_data_output = arr.take_bits();
-		let aux_data_output  = arr.take_bits();
-		let aux_output_activated  = arr.take_bits::<1>().into();
-		let operation 	= arr.take_bits::<{AluOperation::BITS}>().into();
-
-		AluConfig{
-			execution_signal_input,
-			execution_signal_output,
-			data_input_0,
-			data_input_1,
-			main_data_output,
-			aux_data_output,
-			aux_output_activated,
-			operation,
-		}
-	}
+pub const ALU_COUNT: usize = 32;
+#[derive(Clone, PartialEq, Eq, Debug, Copy)]
+pub enum MovInput {
+    Source(CpuRegisterAddress),
+    SourceAddr(CpuRegisterAddress),
 }
 
-pub const ALU_CONFIG_SIGNAL_SIZE: usize
-    = (6 * CpuRegistersAddress::BITS)  	// 6 ios
-    + AluOperation::BITS  			    // operation
-    + 1							    	// aux_output_activated
-;
+pub type AluConfigBank = RegisterBank<AluOperation, ALU_COUNT>;
+pub type AluConfigBankWriter = RegisterBankWriter<AluOperation, ALU_COUNT>;
+pub type AluConfigReader = RegisterReader<AluOperation>;
 
+#[derive(Clone, PartialEq, Eq, Debug, Copy)]
+pub enum AluOperation {
+    NoOp,
+    Eq {
+        execution_signal_input: CpuRegisterAddress,
+        execution_signal_output: Option<CpuRegisterAddress>,
+        data_input_0: CpuRegisterAddress,
+        data_input_1: CpuRegisterAddress,
+        data_output: CpuRegisterAddress,
+    },
+    Mov {
+        execution_signal_input: CpuRegisterAddress,
+        address_input: MovInput,
+        data_output: CpuRegisterAddress,
+        execution_signal_output: Option<CpuRegisterAddress>,
+    },
+    Latch {
+        execution_signal_input  : CpuRegisterAddress,
+        data_input              : CpuRegisterAddress,
+        main_data_output        : CpuRegisterAddress,
+        execution_signal_output : Option<CpuRegisterAddress>,
+    },
+    Not {
+        execution_signal_input  : CpuRegisterAddress,
+        data_input              : CpuRegisterAddress,
+        main_data_output        : CpuRegisterAddress,
+        execution_signal_output : Option<CpuRegisterAddress>,
+    },
+    And {
+        execution_signal_input  : CpuRegisterAddress,
+        data_input_0            : CpuRegisterAddress,
+        data_input_1            : CpuRegisterAddress,
+        main_data_output        : CpuRegisterAddress,
+        execution_signal_output : Option<CpuRegisterAddress>,
+    },
+    Or {
+        execution_signal_input  : CpuRegisterAddress,
+        data_input_0            : CpuRegisterAddress,
+        data_input_1            : CpuRegisterAddress,
+        main_data_output        : CpuRegisterAddress,
+        execution_signal_output : Option<CpuRegisterAddress>,
+    },
+    Xor {
+        execution_signal_input  : CpuRegisterAddress,
+        data_input_1            : CpuRegisterAddress,
+        data_input_0            : CpuRegisterAddress,
+        main_data_output        : CpuRegisterAddress,
+        execution_signal_output : Option<CpuRegisterAddress>,
+    },
+    ShiftLeft {
+        execution_signal_input  : CpuRegisterAddress,
+        value                   : CpuRegisterAddress,
+        shift_count             : CpuRegisterAddress,
+        main_data_output        : CpuRegisterAddress,
+        execution_signal_output : Option<CpuRegisterAddress>,
+    },
+    ShiftRight {
+        execution_signal_input: CpuRegisterAddress,
+        value: CpuRegisterAddress,
+        shift_count: CpuRegisterAddress,
+        main_data_output: CpuRegisterAddress,
+        execution_signal_output: Option<CpuRegisterAddress>,
+    },
+    SelectPart {
+        execution_signal_input: CpuRegisterAddress,
+        data_input: CpuRegisterAddress,
+        selection_input: CpuRegisterAddress,
+        main_data_output: CpuRegisterAddress,
+        execution_signal_output: Option<CpuRegisterAddress>,
+    },
+    Add {
+        execution_signal_input  : CpuRegisterAddress,
+        data_input_1            : CpuRegisterAddress,
+        data_input_0            : CpuRegisterAddress,
+        main_data_output        : CpuRegisterAddress,
+        flags_output            : Option<CpuRegisterAddress>,
+        execution_signal_output : Option<CpuRegisterAddress>,
+    },
+    Sub {
+        execution_signal_input: CpuRegisterAddress,
+        data_input_1            : CpuRegisterAddress,
+        data_input_0            : CpuRegisterAddress,
+        main_data_output        : CpuRegisterAddress,
+        flags_output            : Option<CpuRegisterAddress>,
+        execution_signal_output : Option<CpuRegisterAddress>,
+    },
+    Mul {
+        execution_signal_input: CpuRegisterAddress,
+        data_input_1: CpuRegisterAddress,
+        data_input_0: CpuRegisterAddress,
+        first_word_output: CpuRegisterAddress,
+        second_word_output: Option<CpuRegisterAddress>,
+        execution_signal_output: Option<CpuRegisterAddress>,
+    },
+    Div {
+        execution_signal_input: CpuRegisterAddress,
+        dividend: CpuRegisterAddress,
+        divisor: CpuRegisterAddress,
+        main_data_output: CpuRegisterAddress,
+        div_by_zero_flag_output: Option<CpuRegisterAddress>,
+        execution_signal_output: Option<CpuRegisterAddress>,
+    },
+    Rem {
+        execution_signal_input  : CpuRegisterAddress,
+        dividend: CpuRegisterAddress,
+        divisor: CpuRegisterAddress,
+        main_data_output        : CpuRegisterAddress,
+        div_by_zero_flag_output : Option<CpuRegisterAddress>,
+        execution_signal_output : Option<CpuRegisterAddress>,
+    },
 
-#[derive(LogicBlock)]
-pub struct AluConfigBank {
-	inner: RegisterBank<AluConfig, ALU_ADDR_SIZE, ALU_COUNT>
+    Neg {
+        execution_signal_input: CpuRegisterAddress,
+        input: CpuRegisterAddress,
+        main_data_output: CpuRegisterAddress,
+        execution_signal_output: Option<CpuRegisterAddress>,
+    },
+
+    ReadFromMem {
+        execution_signal_input: CpuRegisterAddress,
+        data_input_0: CpuRegisterAddress,
+        main_data_output: CpuRegisterAddress,
+        execution_signal_output: Option<CpuRegisterAddress>,
+    },
+
+    WriteToMem {
+        execution_signal_input  : CpuRegisterAddress,
+        address_input           : CpuRegisterAddress,
+        data_input              : CpuRegisterAddress,
+        execution_signal_output : Option<CpuRegisterAddress>,
+    },
 }
-
-impl Logic for AluConfigBank{
-	fn update(&mut self) {} //amazin
+pub struct AluPortsConfig {
+    pub input_0: Option<CpuRegisterAddress>,
+    pub input_1: Option<CpuRegisterAddress>,
+    pub activation_input: Option<CpuRegisterAddress>,
+    pub main_output: Option<CpuRegisterAddress>,
+    pub aux_output: Option<CpuRegisterAddress>,
+    pub activation_output: Option<CpuRegisterAddress>,
 }
-impl AluConfigBank{
-	pub fn get_configurator(&mut self) -> AluBankConfigurator{
-		let inner_writers = Box::new(std::array::from_fn(|i|self.inner.get_specific_writer(i)));
-		AluBankConfigurator { write_enable: Default::default(), target_all: Default::default(), addr: Default::default(), config_value: Default::default(),inner_writers }
-	}
-	pub fn get_reader(&mut self, alu_addr: usize) -> AluConfigReader {
-		self.inner.get_specific_reader(alu_addr)
-	}
-}
+impl AluOperation {
+    pub fn get_ports_config(&self) -> AluPortsConfig {
+        match self.clone() {
+            AluOperation::NoOp => AluPortsConfig {
+                input_0: None,
+                input_1: None,
+                activation_input: None,
+                main_output: None,
+                aux_output: None,
+                activation_output: None,
+            },
+            AluOperation::Eq {
+                execution_signal_input,
+                execution_signal_output,
+                data_input_0,
+                data_input_1,
+                data_output: main_data_output,
+            } => AluPortsConfig {
+                input_0: Some(data_input_0),
+                input_1: Some(data_input_1),
+                activation_input: Some(execution_signal_input),
+                main_output: Some(main_data_output),
+                aux_output: None,
+                activation_output: execution_signal_output,
+            },
 
+            AluOperation::Mov {
+                execution_signal_input,
+                execution_signal_output,
+                address_input,
+                data_output: output,
+            } => AluPortsConfig {
+                input_0: Some(match address_input{
+                    MovInput::Source(src) => src,
+                    MovInput::SourceAddr(addr_src) => addr_src
+                }),
+                input_1: None,
+                activation_input: Some(execution_signal_input),
+                main_output: Some(output),
+                aux_output: None,
+                activation_output: execution_signal_output,
+            },
 
-#[derive(LogicBlock)]
-pub struct AluBankConfigurator{
-    pub write_enable: Signal<In, bool>,
-	pub target_all	: Signal<In, bool>,
-    pub addr		: Signal<In, AluAddr>,
-	pub config_value: Signal<In, AluConfig>,
-    inner_writers	: Box<[RegisterWriter<AluConfig>; ALU_COUNT]>
-}
-
-
-impl Logic for AluBankConfigurator{
-	#[hdl_gen]
-    fn update(&mut self) {
-		for i in 0..ALU_COUNT{
-			self.inner_writers[i].write_enable.next = false;
-		}
-		if self.write_enable.val() {
-			if self.target_all.val() {
-				for i in 0..ALU_COUNT{
-					self.inner_writers[i].write_value.next = self.config_value.val();
-					self.inner_writers[i].write_enable.next = true;
-				}	
-			} else {
-				self.inner_writers[self.addr.val().index()].write_value.next = self.config_value.val();
-				self.inner_writers[self.addr.val().index()].write_enable.next = true;
-			}
-		}
+            AluOperation::Latch {
+                execution_signal_input,
+                data_input: data_input_0,
+                main_data_output,
+                execution_signal_output,
+            } => AluPortsConfig {
+                input_0: Some(data_input_0),
+                input_1: None,
+                activation_input: Some(execution_signal_input),
+                main_output: Some(main_data_output),
+                aux_output: None,
+                activation_output: execution_signal_output,
+            },
+            AluOperation::Not {
+                execution_signal_input,
+                data_input: data_input_0,
+                main_data_output,
+                execution_signal_output,
+            } => AluPortsConfig{
+                input_0: Some(data_input_0),
+                input_1: None,
+                activation_input: Some(execution_signal_input),
+                main_output: Some(main_data_output),
+                aux_output: None,
+                activation_output:execution_signal_output,
+            },
+            AluOperation::And {
+                execution_signal_input,
+                data_input_1,
+                data_input_0,
+                main_data_output,
+                execution_signal_output,
+            } => AluPortsConfig {
+                input_0: Some(data_input_0),
+                input_1: Some(data_input_1),
+                activation_input: Some(execution_signal_input),
+                main_output: Some(main_data_output),
+                aux_output: None,
+                activation_output: execution_signal_output,
+            },
+            AluOperation::Or {
+                execution_signal_input,
+                data_input_1,
+                data_input_0,
+                main_data_output,
+                execution_signal_output,
+            } => AluPortsConfig {
+                input_0: Some(data_input_0),
+                input_1: Some(data_input_1),
+                activation_input: Some(execution_signal_input),
+                main_output: Some(main_data_output),
+                aux_output: None,
+                activation_output: execution_signal_output,
+            },
+            AluOperation::Xor {
+                execution_signal_input,
+                data_input_1,
+                data_input_0,
+                main_data_output,
+                execution_signal_output,
+            } => AluPortsConfig {
+                input_0: Some(data_input_0),
+                input_1: Some(data_input_1),
+                activation_input: Some(execution_signal_input),
+                main_output: Some(main_data_output),
+                aux_output: None,
+                activation_output: execution_signal_output,
+            },
+            AluOperation::ShiftLeft {
+                execution_signal_input,
+                value,
+                shift_count,
+                main_data_output,
+                execution_signal_output,
+            } => AluPortsConfig {
+                input_0: Some(value),
+                input_1: Some(shift_count),
+                activation_input: Some(execution_signal_input),
+                main_output: Some(main_data_output),
+                aux_output: None,
+                activation_output: execution_signal_output,
+            },
+            AluOperation::ShiftRight {
+                execution_signal_input,
+                value,
+                shift_count,
+                main_data_output,
+                execution_signal_output,
+            } => AluPortsConfig {
+                input_0: Some(value),
+                input_1: Some(shift_count),
+                activation_input: Some(execution_signal_input),
+                main_output: Some(main_data_output),
+                aux_output: None,
+                activation_output: execution_signal_output,
+            },
+            AluOperation::SelectPart {
+                execution_signal_input,
+                data_input: data_input_1,
+                selection_input: data_input_0,
+                main_data_output,
+                execution_signal_output,
+            } => AluPortsConfig {
+                input_0: Some(data_input_0),
+                input_1: Some(data_input_1),
+                activation_input: Some(execution_signal_input),
+                main_output: Some(main_data_output),
+                aux_output: None,
+                activation_output: execution_signal_output,
+            },
+            AluOperation::Add {
+                execution_signal_input,
+                data_input_1,
+                data_input_0,
+                main_data_output,
+                flags_output,
+                execution_signal_output,
+            } => AluPortsConfig {
+                input_0: Some(data_input_0),
+                input_1: Some(data_input_1),
+                activation_input: Some(execution_signal_input),
+                main_output: Some(main_data_output),
+                aux_output: flags_output,
+                activation_output: execution_signal_output,
+            },
+            AluOperation::Sub {
+                execution_signal_input,
+                data_input_1,
+                data_input_0,
+                main_data_output,
+                flags_output,
+                execution_signal_output,
+            } => AluPortsConfig {
+                input_0: Some(data_input_0),
+                input_1: Some(data_input_1),
+                activation_input: Some(execution_signal_input),
+                main_output: Some(main_data_output),
+                aux_output : flags_output,
+                activation_output: execution_signal_output,
+            },
+            AluOperation::Mul {
+                execution_signal_input,
+                data_input_1,
+                data_input_0,
+                first_word_output: main_data_output,
+                second_word_output,
+                execution_signal_output,
+            } => AluPortsConfig {
+                input_0: Some(data_input_0),
+                input_1: Some(data_input_1),
+                activation_input: Some(execution_signal_input),
+                main_output: Some(main_data_output),
+                aux_output: second_word_output,
+                activation_output: execution_signal_output,
+            },
+            AluOperation::Div {
+                execution_signal_input,
+                divisor: data_input_1,
+                dividend: data_input_0,
+                main_data_output,
+                div_by_zero_flag_output: div_by_zero_output,
+                execution_signal_output,
+            } => AluPortsConfig {
+                input_0: Some(data_input_0),
+                input_1: Some(data_input_1),
+                activation_input: Some(execution_signal_input),
+                main_output: Some(main_data_output),
+                aux_output: div_by_zero_output,
+                activation_output: execution_signal_output,
+            },
+            AluOperation::Rem {
+                execution_signal_input,
+                divisor: data_input_1,
+                dividend: data_input_0,
+                main_data_output,
+                div_by_zero_flag_output: div_by_zero_output,
+                execution_signal_output,
+            } => AluPortsConfig {
+                input_0: Some(data_input_0),
+                input_1: Some(data_input_1),
+                activation_input: Some(execution_signal_input),
+                main_output: Some(main_data_output),
+                aux_output: div_by_zero_output,
+                activation_output: execution_signal_output,
+            },
+            AluOperation::Neg {
+                execution_signal_input,
+                input: data_input_0,
+                main_data_output,
+                execution_signal_output,
+            } => AluPortsConfig {
+                input_0: Some(data_input_0),
+                input_1: None,
+                activation_input: Some(execution_signal_input),
+                main_output: Some(main_data_output),
+                aux_output: None,
+                activation_output: execution_signal_output,
+            },
+            AluOperation::ReadFromMem {
+                execution_signal_input,
+                data_input_0: addr_input,
+                main_data_output,
+                execution_signal_output,
+            } => AluPortsConfig {
+                input_0: Some(addr_input),
+                input_1: None,
+                activation_input: Some(execution_signal_input),
+                main_output: Some(main_data_output),
+                aux_output: None,
+                activation_output: execution_signal_output,
+            },
+            AluOperation::WriteToMem {
+                execution_signal_input,
+                data_input,
+                address_input,
+                execution_signal_output,
+            } => AluPortsConfig {
+                input_0: Some(data_input),
+                input_1: Some(address_input),
+                activation_input: Some(execution_signal_input),
+                main_output: None,
+                aux_output: None,
+                activation_output: execution_signal_output,
+            },
+        }
     }
 }

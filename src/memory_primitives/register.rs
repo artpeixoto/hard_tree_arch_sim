@@ -1,119 +1,78 @@
-use rust_hdl::{prelude::*, widgets::edge_ff::EdgeDFF};
+use std::ops::Deref;
+use std::sync::{Arc, RwLock, RwLockWriteGuard};
+use bevy::asset::uuid::Uuid;
+use bevy::prelude::*;
+use crate::{Step, ClockTransition};
 
+#[derive(Component)]
 
-#[derive(LogicBlock)]
-pub struct Register<Data: Synth>{
-	pub clock	: Signal<In, Clock>,
-	write_enable: Signal<InOut, Bit>,
-	write_value	: Signal<InOut, Data>,
-	inner		: EdgeDFF<Data>,
+pub struct Register<Data>{
+	next_value	: Arc<RwLock<Option<Data>>>,
+	value		: Arc<RwLock<Data>>,
 }
 
-impl<Data: Synth> Register<Data> {
-	pub fn new(clock: Signal<In, Clock>)  -> Self {
-		Self{
-			clock,
-			write_enable: Default::default(),
-			write_value	: Default::default(),
-			inner		: Default::default(),
+
+impl<Data> ClockTransition for Register<Data>{
+	fn step(&mut self, _step: &Step) {
+		if let Some(value) = self.next_value.write().unwrap().take() {
+			*self.value.write().unwrap() = value;
 		}
 	}
 }
 
-impl<Data: Synth> Logic for Register<Data>{
-	fn update(&mut self) {
-		// activates at negative clock
-		self.inner.clk.next = !self.clock.val();
-		if !self.clock.val().clk{
-			self.write_enable.next = false;
-		} else { // clock is up
-			if self.write_enable.val(){
-				self.inner.d.next = self.write_value.val();
-			}
+impl<Data> Register<Data>{
+	pub fn read<'a>(&'a self) -> impl Deref<Target=Data> + 'a{
+		self.value.read().unwrap()
+	}
+
+	pub fn write<'a>(&'a self, new_value:  Data) {
+		self.next_value.write().unwrap().replace(new_value);
+	}
+
+	pub fn new(initial_value: Data) -> Register<Data>{
+		Register{
+			next_value: Arc::new(RwLock::new(None)),
+			value: Arc::new(RwLock::new(initial_value)),	
 		}
 	}
-}
-impl<Data: Synth> Register<Data>{
-	pub fn get_reader(&mut self) -> RegisterReader<Data>{
-		RegisterReader{value: self.inner.q.clone()}
-	}
-	pub fn get_writer(&mut self) -> RegisterWriter<Data>{
-		let mut write_enable_buffer = TristateBuffer::default();
-		self.write_enable.join(&mut write_enable_buffer.bus);
-		let mut write_value_buffer = TristateBuffer::default();
-		self.write_value.join(&mut write_value_buffer.bus);
 
-
-		RegisterWriter { 
-			write_enable: Default::default(), 
-			write_value: Default::default(), 
-			clock: self.clock.clone(),
-			inner_value: write_value_buffer, 
-			inner_write_enable: write_enable_buffer, 
+	pub fn get_reader(& self) -> RegisterReader<Data>{
+		RegisterReader{
+			value: self.value.clone(), 
 		}
 	}
+	pub fn get_writer(& self) -> RegisterWriter<Data>{
+		RegisterWriter{
+			write: self.next_value.clone(),
+		}	
+	} 
 }
 
-#[derive(LogicBlock)]
-pub struct RegisterReader<Data: Synth>{
-	pub value: Signal<Out, Data>
+#[derive(Component)]
+pub struct RegisterReader<Data>{
+	value: Arc<RwLock<Data>>
 }
-impl<Data: Synth> Logic for RegisterReader<Data>{
-	#[hdl_gen]
-	fn update(&mut self) {
+
+impl<Data> RegisterReader<Data>{
+	pub fn read<'a>(&'a self) -> impl Deref<Target=Data> + 'a {
+		self.value.read().unwrap()
+	}
+	pub fn is_same(&self, reg: &Register<Data>) -> bool{
+		self.value.deref() as *const _ == reg.value.deref() as *const _
 	}
 }
 
-#[derive(LogicBlock)]
-pub struct RegisterWriter<Data: Synth>{
-	pub write_enable: Signal<In, Bit>,
-	pub write_value	: Signal<In, Data>,
-	clock: Signal<In, Clock>,
-	inner_value: TristateBuffer<Data>,
-	inner_write_enable: TristateBuffer<Bit>,
+#[derive(Component)]
+pub struct RegisterWriter<Data>{
+	write	: Arc<RwLock<Option<Data>>>,
 }
 
-impl<Data: Synth> Logic for RegisterWriter<Data>{
-	fn update(&mut self) {
-		self.inner_value.write_enable.next = false;
-		self.inner_write_enable.write_enable.next = false;
-
-		if self.clock.val().clk {  //i know i could collapse, but i don't know, for some reason it doesnt seem right. Maybe because i want to separate the concept of doing somthing in the up and then doing some other thing in the down
-			if self.write_enable.val(){
-				self.inner_value.write_data.next 			= self.write_value.val();
-				self.inner_value.write_enable.next 			= true;
-				self.inner_write_enable.write_data.next 	= true;
-				self.inner_write_enable.write_enable.next 	= true;
-			} 
-		} 	
+impl<Data> RegisterWriter<Data>{
+	pub fn write(&mut self, value: Data) {
+		*self.write.write().unwrap() = Some(value);
 	}
-}
 
-#[derive(Clone, Copy,Debug, PartialEq, Eq, LogicState)]
-pub enum RegisterRwCommand {
-    Write, Read,
-}
-
-#[derive(LogicBlock)]
-pub struct RegisterRw<Data: Synth>{
-	pub cmd: Signal<In, RegisterRwCommand>,
-	pub value: Signal<InOut, Data>,
-
-	reader	: RegisterReader <Data>,
-	writer	: RegisterWriter <Data>
-
-}
-impl<Data:Synth> Logic for RegisterRw<Data> {
-	fn update(&mut self) {
-		match self.cmd.val(){
-			RegisterRwCommand::Read  =>{
-				self.writer.write_enable.next = false;
-				self.value.next = self.reader.value.val();
-			} 
-			RegisterRwCommand::Write => {
-				self.writer.write_value.next = self.value.val();
-				self.writer.write_enable.next = true;
-			}
-		}
+	pub fn is_same(&self, reg: &Register<Data>) -> bool{
+		self.write.deref() as *const _ == reg.next_value.deref() as *const _
 	}
 }

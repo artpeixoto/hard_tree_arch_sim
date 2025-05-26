@@ -1,18 +1,18 @@
 use std::{ iter::repeat_n};
 use rust_hdl::{prelude::*};
-use crate::{alu::{AluAddr, AluConfig, ALU_ADDR_SIZE, ALU_CONFIG_SIGNAL_SIZE}, cpu_registers::CpuRegistersAddress, word::{ToWord, Word, WORD_SIZE}};
+use crate::{alu::{AluAddr, AluOperation, ALU_ADDR_SIZE, ALU_CONFIG_SIGNAL_SIZE}, cpu_registers::CpuRegisterAddress, word::{ToWord, Word, WORD_SIZE}};
 
 pub const CONTROLLER_INSTRUCTION_SIZE   		: usize = 64;
 
 #[derive( PartialEq, Copy, Clone, Debug,Eq, Default)]
-pub enum ControllerInstruction{
+pub enum Instruction {
     SetAluConfig{
         alu_addr	: AluAddr,
-        alu_config	: AluConfig
+        alu_config	: AluOperation
     },
 
     SetLiteral{
-        register_index  : CpuRegistersAddress,
+        register_index  : CpuRegisterAddress,
         literal			: Word,
     },
 
@@ -25,7 +25,7 @@ pub enum ControllerInstruction{
     // },
 
     WaitForActivationSignal{
-        register_index  : CpuRegistersAddress
+        register_index  : CpuRegisterAddress
     },
 
     Jump{
@@ -40,7 +40,7 @@ pub enum ControllerInstruction{
 }
 
 
-impl From<Bits<CONTROLLER_INSTRUCTION_SIZE>> for ControllerInstruction{
+impl From<Bits<CONTROLLER_INSTRUCTION_SIZE>> for Instruction {
 	fn from(val: Bits<CONTROLLER_INSTRUCTION_SIZE>) -> Self {
         let bit_vec = val.to_bit_vec().0;
         if bit_vec[0]{
@@ -48,7 +48,7 @@ impl From<Bits<CONTROLLER_INSTRUCTION_SIZE>> for ControllerInstruction{
             let alu_addr = (&bit_vec[index..next]).to_bits(); 
             index = next; next = next + ALU_CONFIG_SIGNAL_SIZE;
             let alu_config = (&bit_vec[index..next]).into();
-            return ControllerInstruction::SetAluConfig { 
+            return Instruction::SetAluConfig { 
                 alu_addr, 
                 alu_config  
             };
@@ -56,7 +56,7 @@ impl From<Bits<CONTROLLER_INSTRUCTION_SIZE>> for ControllerInstruction{
             let mut bit_vec = &bit_vec[1..]; 
             match bit_vec.take_bits::<3>().to_u8(){
                 0b000 => {
-                    ControllerInstruction::SetLiteral { 
+                    Instruction::SetLiteral { 
                         register_index  : bit_vec.take_bits(), 
                         literal         : bit_vec.take_bits::<WORD_SIZE>().to_word()
                     }
@@ -67,22 +67,22 @@ impl From<Bits<CONTROLLER_INSTRUCTION_SIZE>> for ControllerInstruction{
                 // 0b010 => ControllerInstruction::PushToStack {
                 //     register_index: bit_vec.take_bits()
                 // },
-                0b011 => ControllerInstruction::WaitForActivationSignal { 
+                0b011 => Instruction::WaitForActivationSignal { 
                     register_index: bit_vec.take_bits()
                 },
-                0b100 => ControllerInstruction::Jump { 
+                0b100 => Instruction::Jump { 
                     relative: bit_vec.take_bits::<1>().into(),
                     addr: bit_vec.take_bits::<WORD_SIZE>().into()
                 },
-                0b101 => ControllerInstruction::ResetAll,
-                0b111 => ControllerInstruction::NoOp,
+                0b101 => Instruction::ResetAll,
+                0b111 => Instruction::NoOp,
                 _     => panic!()
             }
         }
 	}
 }
 
-impl Synth for ControllerInstruction{
+impl Synth for Instruction {
     const BITS: usize = CONTROLLER_INSTRUCTION_SIZE;
 
     fn descriptor() -> TypeDescriptor {
@@ -186,16 +186,16 @@ impl TakeBits for &[bool]{
 }
 
 
-impl ToBits for ControllerInstruction{
+impl ToBits for Instruction {
     fn to_bits<const N: usize>(self) -> Bits<N> {
         let inner: Bits<CONTROLLER_INSTRUCTION_SIZE> = 
             match self {
-                ControllerInstruction::SetAluConfig { alu_addr, alu_config } => {
+                Instruction::SetAluConfig { alu_addr, alu_config } => {
                     bits::<1>(0b1).to_bit_vec()
                     .cat(alu_addr)
                     .cat(alu_config)
                 },
-                ControllerInstruction::SetLiteral { register_index, literal } => {
+                Instruction::SetLiteral { register_index, literal } => {
                     bits::<4>(0b0000).to_bit_vec()
                     .cat(register_index)
                     .cat(literal)
@@ -209,19 +209,19 @@ impl ToBits for ControllerInstruction{
                 //     bits::<4>(0b0010).to_bit_vec()
                 //     .cat(register_index),
 
-                ControllerInstruction::WaitForActivationSignal { register_index } =>
+                Instruction::WaitForActivationSignal { register_index } =>
                     bits::<4>(0b0011).to_bit_vec()
                     .cat(register_index),
 
-                ControllerInstruction::Jump { relative, addr } => 
+                Instruction::Jump { relative, addr } => 
                     bits::<4>(0b0100).to_bit_vec()
                     .cat(relative)
                     .cat(addr),
 
-                ControllerInstruction::ResetAll => 
+                Instruction::ResetAll => 
                     bits::<4>(0b0101).to_bit_vec(),
 
-                ControllerInstruction::NoOp => 
+                Instruction::NoOp => 
                     bits::<4>(0b0111).to_bit_vec()
             }
             .extend(HorizontalDir::Left, false, 64)
