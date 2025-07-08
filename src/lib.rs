@@ -1,23 +1,26 @@
 #![allow(unused_parens)]
+#![deny(unconditional_recursion)]
+
 #![feature(const_type_name)]
+#![feature(bigint_helper_methods)]
+#![feature(strict_overflow_ops)]
+#![feature(mixed_integer_ops_unsigned_sub)]
+#![feature(unique_rc_arc)]
+#![feature(let_chains)]
+#![feature(coroutines)]
+
+extern crate core;
 
 pub mod memory_primitives;
-pub mod cpu_registers;
-pub mod instruction;
-pub mod alu;
-pub mod controller;
 pub mod word;
-pub mod instruction_reader;
-pub mod main_memory;
-mod cpu;
-mod sim;
-
-
+pub mod application;
+pub mod tools;
 
 pub const PROGRAM_COUNTER_REGISTER_ADDR: usize = 63;
 
-
 pub type Step = u32;
-pub trait ClockTransition {
-	fn step(&mut self, step: &Step);
+
+
+pub trait Draw{
+	fn draw(&self);
 }

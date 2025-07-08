@@ -1,19 +1,20 @@
-use std::{ iter::repeat_n};
-use crate::{alu:: AluOperation, cpu_registers::CpuRegisterAddress, };
+use crate::application::simulation::cpu_registers::CpuRegisterAddress;
+use crate::application::simulation::alu::AluOperation;
 use crate::word::Word;
 
 pub const CONTROLLER_INSTRUCTION_SIZE   		: usize = 64;
 
+
 #[derive( PartialEq, Copy, Clone, Debug,Eq, Default)]
 pub enum Instruction {
     SetAluConfig{
+        alu_config	: AluOperation, 
         alu_addr	: usize,
-        alu_config	: AluOperation
     },
-
+    
     SetLiteral{
-        register_index  : CpuRegisterAddress,
         literal			: Word,
+        register: CpuRegisterAddress,
     },
 
     // PopStack{
@@ -29,7 +30,7 @@ pub enum Instruction {
     },
 
     Jump{
-        relative        : bool,
+        // relative        : bool,
         addr            : Word
     },
     
@@ -39,16 +40,12 @@ pub enum Instruction {
     NoOp,
 }
 
-
-
-
-
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum HorizontalDir{
     Left,
     Right
 }
+
 
 
 

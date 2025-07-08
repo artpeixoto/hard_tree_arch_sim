@@ -2,6 +2,9 @@
   <dictionary name="project">
     <words>
       <w>alus</w>
+      <w>fdist</w>
+      <w>fgrid</w>
+      <w>macroquad</w>
     </words>
   </dictionary>
 </component>

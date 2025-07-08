@@ -1,20 +1,25 @@
 [package]
-name = "soldiers"
+name = "strucc"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
-bevy = "0.16.0"
-bevy_tween = "0.8.0"
-bevy_vector_shapes = "0.10.0"
+derive_more = { version = "2.0.1", features = ["full"] }
+# bevy = "0.16.0"
+# bevy_tween = "0.8.0"
+# bevy_vector_shapes = "0.10.0"
 either = "1.15.0"
 itertools = "0.14.0"
+macroquad = "0.4.14"
+ordered_vec = "0.2.0"
+palette = "0.7.6"
 structstruck = "0.5.0"
+wgpu = "25.0.2"
 
-[profile.dev.package."bevy"]
-opt-level = 3
-incremental = true
+ [profile.dev.package."macroquad"]
+ opt-level = 3
+ incremental = true
 
-[profile.release.package."bevy"]
+[profile.release.package."macroquad"]
 opt-level = 3
 incremental = true
