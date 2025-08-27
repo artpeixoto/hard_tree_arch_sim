@@ -1,9 +1,10 @@
 use macroquad::prelude::*;
-use simulation::alu::Alus;
+use simulation::alu::AluBank;
 use crate::application::draw::text::draw_title;
 use draw::pos::Pos;
-use simulation::cpu::Cpu;
+use simulation::simulation::Cpu;
 use simulation::instruction::Instruction;
+use crate::word::Word;
 
 pub mod grid;
 pub mod draw;
@@ -11,12 +12,13 @@ pub mod prelude;
 pub mod direction;
 pub mod simulation;
 
-pub async fn simulation(program: Vec<Instruction>){
-    let cpu = Cpu::new(program);
-    let step = 0;
-    loop {
-    }
-}
+// pub async fn run_simulation(program: Vec<Instruction>, data: Vec<Word>){
+//     let cpu = Cpu::new(program, data);
+//     let step = 0;
+//              
+//     loop {
+//     }
+// }
 
 // pub fn draw_alus(
 //     alus        : &Alus,

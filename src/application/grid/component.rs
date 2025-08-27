@@ -1,40 +1,40 @@
 use std::hash::Hash;
 use std::marker::PhantomData;
+use wgpu::naga::FastHashMap;
 use crate::application::draw::grid_to_screen::GridToScreenMapper;
-use crate::application::draw::port::{PortDrawingData, PortGridData, PortData};
+use crate::application::draw::port::{PortDrawingDefns, PortGridDefns, PortDefns};
 use crate::application::grid::blocked_point::BlockedPoints;
 use crate::application::grid::pos::GridPos;
 use crate::application::grid::rect::GridRect;
 
 pub trait DrawableComponent {
-    type DrawingData;
+    type DrawingState;
+    type DrawingDefn;
     type PortName: PortName;
     type PortDataContainer
-        : PortDataContainer<Self::PortName, PortData>;
+        : PortDataContainer<Self::PortName, PortDefns>;
     type PortGridDataContainer
-        : PortDataContainer<Self::PortName, PortGridData>;
+        : PortDataContainer<Self::PortName, PortGridDefns>;
 
-    fn calculate_grid_data(
+    type ComponentCalculatedDefns:  ComponentGridData<
+        PortName=Self::PortName,
+        PortDataContainer=Self::PortDataContainer,
+        PortGridDataContainer=Self::PortGridDataContainer,
+    > ;
+    fn calculate_defns(
         &self,
         grid_pos         : GridPos,
-        drawing_info     : &Self::DrawingData,
-        port_drawing_info: &PortDrawingData,
+        drawing_info     : &Self::DrawingDefn,
+        port_drawing_info: &PortDrawingDefns,
         grid_to_screen   : &GridToScreenMapper,
-    ) -> ComponentGridData<
-        Self::PortName,
-        Self::PortDataContainer,
-        Self::PortGridDataContainer
-    >;
+    ) -> Self::ComponentCalculatedDefns;
 
     fn draw(
         &self,
-        grid_data: &ComponentGridData<
-            Self::PortName,
-            Self::PortDataContainer,
-            Self::PortGridDataContainer
-        >,
-        drawing_data     : &Self::DrawingData,
-        port_drawing_info: &PortDrawingData,
+        drawing_state    : &Self::DrawingState,
+        grid_defns       : &Self::ComponentCalculatedDefns,
+        drawing_defns    : &Self::DrawingDefn,
+        port_drawing_info: &PortDrawingDefns,
         grid_to_screen   : &GridToScreenMapper,
     );
 }
@@ -46,11 +46,51 @@ pub trait PortName: Sized + Hash + Eq + Clone {
     fn small_name(&self) -> &str;
 }
 
-pub struct ComponentGridData<N, P, G,>
+pub trait ComponentGridData
+{
+    type PortName: PortName;
+    type PortDataContainer: PortDataContainer<Self::PortName, PortDefns>;
+    type PortGridDataContainer: PortDataContainer<Self::PortName, PortGridDefns>;
+    fn grid_rect(&self) -> GridRect;
+    fn blocked_points(&self) -> &BlockedPoints;
+    fn ports_data(&self) -> &Self::PortDataContainer;
+    fn ports_grid_data (&self) -> &Self::PortGridDataContainer;
+}
+
+impl<N, P, G>
+    ComponentGridData
+    for SimpleComponentGridDefns<N, P, G>
 where
     N: PortName,
-    P: PortDataContainer<N, PortData>,
-    G: PortDataContainer<N, PortGridData>,
+    P: PortDataContainer<N, PortDefns>,
+    G: PortDataContainer<N, PortGridDefns>,
+{
+    type PortName = N; 
+    type PortDataContainer = P;
+    type PortGridDataContainer = G;
+
+    fn grid_rect(&self) -> GridRect {
+        self.grid_rect.clone()
+    }
+
+    fn blocked_points(&self) -> &BlockedPoints {
+        &self.blocked_points
+    }
+
+    fn ports_data(&self) -> &P {
+        &self.ports_data
+    }
+
+    fn ports_grid_data(&self) -> &G {
+        &self.ports_grid_data
+    }
+}
+
+pub struct SimpleComponentGridDefns<N, P, G,>
+where
+    N: PortName,
+    P: PortDataContainer<N, PortDefns>,
+    G: PortDataContainer<N, PortGridDefns>,
 {
     pub grid_rect       : GridRect,
     pub blocked_points  : BlockedPoints,
@@ -61,4 +101,9 @@ where
 
 pub trait PortDataContainer< N: PortName, P, >{
     fn get_for_port(&self, port_name: &N) -> &P;
+}
+impl<N: PortName, P> PortDataContainer<N, P> for FastHashMap<N, P>{
+    fn get_for_port(&self, port_name: &N) -> &P {
+        &self[port_name]
+    }
 }

@@ -1,27 +1,34 @@
 use std::ops::Index;
 use itertools::Itertools;
-use crate::application::simulation::alu::AluPortName;
+use crate::application::simulation::alu::{AluPortName, AluPortsDefns};
 use crate::application::direction::Direction;
-use crate::application::draw::port::{PortData, PortGridData, PortSignalDirection};
+use crate::application::draw::port::{PortDefns, PortGridDefns, PortSignalDirection};
 use crate::application::grid::alu::AluPortName::{DataIn0, DataIn1};
 use crate::application::grid::blocked_point::BlockedPoints;
-use crate::application::grid::component::PortDataContainer;
+use crate::application::grid::component::{PortDataContainer, SimpleComponentGridDefns};
 use crate::application::grid::pos::{grid_pos, GridPos, GridDist};
-
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct AluPortsGridData {
-    pub data_in_0       : PortGridData,
-    pub data_in_1       : PortGridData,
-    pub activation_in   : PortGridData,
+pub struct AluPortsGridDefns {
+    pub data_in_0       : PortGridDefns,
+    pub data_in_1       : PortGridDefns,
+    pub activation_in   : PortGridDefns,
 
-    pub data_out_0      : PortGridData,
-    pub data_out_1      : PortGridData,
-    pub activation_out  : PortGridData,
+    pub data_out_0      : PortGridDefns,
+    pub data_out_1      : PortGridDefns,
+    pub activation_out  : PortGridDefns,
 
     // pub setup_in     : PortGridInfo,
 }
-impl PortDataContainer<AluPortName, PortGridData> for AluPortsGridData {
-    fn get_for_port(&self, port_name: &AluPortName) -> &PortGridData {
+
+pub type AluGridDefns =
+    SimpleComponentGridDefns<
+        AluPortName,
+        AluPortsDefns,
+        AluPortsGridDefns
+    >;
+
+impl PortDataContainer<AluPortName, PortGridDefns> for AluPortsGridDefns {
+    fn get_for_port(&self, port_name: &AluPortName) -> &PortGridDefns {
         use AluPortName::*;
         match port_name{
             DataIn0 => {&self.data_in_0}

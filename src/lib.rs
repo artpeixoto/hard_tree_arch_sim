@@ -1,17 +1,28 @@
-#![allow(unused_parens)]
-#![deny(unconditional_recursion)]
 
-#![feature(const_type_name)]
-#![feature(bigint_helper_methods)]
-#![feature(strict_overflow_ops)]
-#![feature(mixed_integer_ops_unsigned_sub)]
-#![feature(unique_rc_arc)]
-#![feature(let_chains)]
-#![feature(coroutines)]
+
+#![allow(unused_parens)]
+
+#![deny(
+	unconditional_recursion,
+	unused_must_use,
+)]
+
+#![feature(
+	const_type_name,
+	slice_as_array,
+	bigint_helper_methods,
+	strict_overflow_ops,
+	mixed_integer_ops_unsigned_sub,
+	unique_rc_arc,
+	let_chains,
+	coroutines,
+	coroutine_trait,
+	stmt_expr_attributes
+)]
+
 
 extern crate core;
 
-pub mod memory_primitives;
 pub mod word;
 pub mod application;
 pub mod tools;

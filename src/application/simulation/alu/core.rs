@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 use super::AluOperation;
 use crate::application::draw::port::SignalType::Activation;
-use crate::application::draw::port::{PortData, PortSignalDirection, SignalType};
+use crate::application::draw::port::{PortDefns, PortSignalDirection, SignalType};
 use crate::application::grid::component::{PortDataContainer, PortName};
 use crate::application::simulation::alu::AluPortName::{
     ActivationIn, ActivationOut, DataIn0, DataIn1, DataOut0, DataOut1,
 };
 use crate::application::simulation::main_memory::{MainMemory, MainMemoryIo};
-use crate::memory_primitives::register::Register;
+use crate::application::simulation::memory_primitives::register::Register;
 use crate::word::{ToBool, ToWord, Word};
 use std::mem::transmute;
 use std::ops::Index;
@@ -57,18 +57,18 @@ impl PortName for AluPortName {
     }
 }
 
-pub struct AluPortsData {
+pub struct AluPortsDefns {
     // pub state_in            : PortInfo,
-    pub data_input_0: PortData,
-    pub data_input_1: PortData,
-    pub activation_input: PortData,
+    pub data_input_0    : PortDefns,
+    pub data_input_1    : PortDefns,
+    pub activation_input: PortDefns,
 
-    pub data_output_0: PortData,
-    pub data_output_1: PortData,
-    pub activation_output: PortData,
+    pub data_output_0   : PortDefns,
+    pub data_output_1   : PortDefns,
+    pub activation_output: PortDefns,
 }
-impl PortDataContainer<AluPortName, PortData> for AluPortsData {
-    fn get_for_port(&self, port_name: &AluPortName) -> &PortData {
+impl PortDataContainer<AluPortName, PortDefns> for AluPortsDefns {
+    fn get_for_port(&self, port_name: &AluPortName) -> &PortDefns {
         match port_name {
             ActivationIn => &self.activation_input,
             DataIn0 => &self.data_input_0,
@@ -142,35 +142,35 @@ impl AluCore {
             activation_output   : CpuRegisterActWriter::new(),
         }
     }
-    pub fn get_ports_info(&self) -> AluPortsData {
+    pub fn get_ports_info(&self) -> AluPortsDefns {
         let ports_data = self.operation.get_ports_config();
-        AluPortsData {
-            data_input_0: PortData {
+        AluPortsDefns {
+            data_input_0: PortDefns {
                 active: ports_data.data_input_0.is_some(),
                 signal_dir: Input,
                 signal_type: Data,
             },
-            data_input_1: PortData {
+            data_input_1: PortDefns {
                 active: ports_data.data_input_1.is_some(),
                 signal_dir: Input,
                 signal_type: Data,
             },
-            activation_input: PortData {
+            activation_input: PortDefns {
                 active: ports_data.activation_input.is_some(),
                 signal_dir: Input,
                 signal_type: Activation,
             },
-            data_output_0: PortData {
+            data_output_0: PortDefns {
                 active: ports_data.data_output_0.is_some(),
                 signal_dir: Output,
                 signal_type: Data,
             },
-            data_output_1: PortData {
+            data_output_1: PortDefns {
                 active: ports_data.data_output_1.is_some(),
                 signal_dir: Output,
                 signal_type: Data,
             },
-            activation_output: PortData {
+            activation_output: PortDefns {
                 active: ports_data.activation_output.is_some(),
                 signal_dir: Output,
                 signal_type: Activation,

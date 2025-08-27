@@ -27,8 +27,8 @@ impl InstructionMemory{
 pub struct InstructionReader{
 	pub program_counter_reader	: CpuRegisterDataReader,
 	pub program_counter_writer  : CpuRegisterDataWriter,
-	increment_cmd			: IncrementCmd,
-	instruction_memory		: Arc<Vec<Instruction>>,
+	increment_cmd				: IncrementCmd,
+	instruction_memory			: Arc<Vec<Instruction>>,
 }
 
 impl InstructionReader{
@@ -50,9 +50,9 @@ impl InstructionReader{
 		self.increment_cmd = cmd;
 	}
 
-	pub fn read<'a>(&'a self) -> impl Deref<Target=Instruction> + 'a{
+	pub fn read<'a>(&'a self) -> Option<impl Deref<Target=Instruction> + 'a>{
 		let addr = self.program_counter_reader.read().unwrap() as usize;
-		self.instruction_memory.get(addr).unwrap()
+		Some(self.instruction_memory.get(addr).unwrap())
 	}
 
 	pub fn step(&mut self) {
@@ -61,8 +61,7 @@ impl InstructionReader{
 				let current_pc = self.program_counter_reader.read().unwrap() ;
 				self.program_counter_writer.write(current_pc+1);
 			},
-			IncrementCmd::NoIncrement => {
-			},
+			IncrementCmd::NoIncrement => {},
 			IncrementCmd::GoTo(new_pc) => {
 				self.program_counter_writer.write(new_pc );
 			}

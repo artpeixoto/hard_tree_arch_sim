@@ -1,26 +1,23 @@
-use crate::memory_primitives::register_bank::ConnectionTarget;
 use std::ops::Index;
 use itertools::Itertools;
-use crate::{memory_primitives::{register::{}, register_bank::{RegisterBank }}, word::Word};
-use crate::application::draw::component_bank::ComponentBankDrawingData;
-use crate::application::simulation::alu::ALU_COUNT;
-use crate::application::draw::port::{PortSignalDirection, PortData, SignalType};
+use crate::word::Word;
+use crate::application::draw::port::{PortDefns, PortSignalDirection, SignalType};
+use crate::application::grid::component::{PortDataContainer, PortName};
 use crate::application::simulation::component_bank::ComponentBank;
 use crate::application::simulation::cpu_registers::CpuRegisterDataReader::{Connected, Deactivated};
-use crate::memory_primitives::register::Register;
 use crate::tools::used_in::UsedIn;
 use crate::word::{ToBool, ToWord};
 
 pub type CpuRegisterAddress = usize;
-pub const CPU_REGISTER_COUNT: CpuRegisterAddress = 64;
-pub type CpuRegisterBank = ComponentBank<CpuRegister, CPU_REGISTER_COUNT>;
+pub const REGISTER_COUNT: CpuRegisterAddress = 64;
+pub type CpuRegisterBank = ComponentBank<CpuRegister, REGISTER_COUNT>;
 
 impl CpuRegisterBank {
     pub fn new() -> Self{
-        let registers = (0..CPU_REGISTER_COUNT).into_iter().map(|address|CpuRegister::new(address))
+        let registers = (0..REGISTER_COUNT).into_iter().map(|address|CpuRegister::new(address))
             .collect_array().unwrap().used_in(Box::new);
         CpuRegisterBank {
-           components: registers 
+           components: registers
         }
     }
 }
@@ -29,9 +26,19 @@ pub struct CpuRegister{
     pub value   : Word,
 }
 
-pub struct CpuRegisterPortsInfo{
-    pub input: PortData,
-    pub output: PortData,
+impl PortDataContainer<CpuRegisterPortName, PortDefns> for CpuRegisterPortsData{
+    fn get_for_port(&self, port_name: &CpuRegisterPortName) -> &PortDefns {
+        match port_name {
+            CpuRegisterPortName::Input => &self.input,
+            CpuRegisterPortName::Output => &self.output,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CpuRegisterPortsData {
+    pub input: PortDefns,
+    pub output: PortDefns,
 }
 
 impl CpuRegister {
@@ -41,14 +48,14 @@ impl CpuRegister {
             value   : 0
         }
     }
-    pub fn ports_info(&self) -> CpuRegisterPortsInfo{
-        CpuRegisterPortsInfo{
-            input: PortData {
+    pub fn ports_info(&self) -> CpuRegisterPortsData {
+        CpuRegisterPortsData {
+            input: PortDefns {
                 active: true,
                 signal_dir: PortSignalDirection::Input,
                 signal_type: SignalType::Data,
             },
-            output: PortData {
+            output: PortDefns {
                 active: true,
                 signal_dir: PortSignalDirection::Output,
                 signal_type: SignalType::Data,
@@ -63,8 +70,8 @@ impl CpuRegister {
     }
 }
 
-impl Index<CpuRegisterPortName> for CpuRegisterPortsInfo {
-    type Output = PortData;
+impl Index<CpuRegisterPortName> for CpuRegisterPortsData {
+    type Output = PortDefns;
 
     fn index(&self, index: CpuRegisterPortName) -> &Self::Output {
         match index{
@@ -78,6 +85,22 @@ pub enum CpuRegisterPortName{
     Input,
     Output,
 }
+impl PortName for CpuRegisterPortName{
+    fn all_port_names() -> Vec<Self> {
+        vec![
+            Self::Input,
+            Self::Output,
+        ]
+    }
+
+    fn small_name(&self) -> &str {
+        match self{
+            CpuRegisterPortName::Input => "in",
+            CpuRegisterPortName::Output => "out"
+        }
+    }
+}
+
 
 impl CpuRegisterPortName{
     pub fn iter_ports()  -> impl Iterator<Item=CpuRegisterPortName>{
@@ -268,3 +291,4 @@ impl CpuRegisterActWriter {
         self.inner.write(value.to_word())
     }
 }
+

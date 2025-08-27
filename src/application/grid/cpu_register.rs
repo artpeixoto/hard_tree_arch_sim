@@ -1,34 +1,30 @@
 use std::ops::Index;
 use crate::application::direction::Direction;
-use crate::application::draw::port::{PortGridData, PortSignalDirection};
+use crate::application::draw::port::{PortDefns, PortGridDefns, PortSignalDirection};
 use crate::application::grid::blocked_point::BlockedPoints;
+use crate::application::grid::component::PortDataContainer;
 use crate::application::grid::pos::{GridPos, GridDist, grid_pos, GridSize, grid_size};
-use crate::application::simulation::cpu_registers::CpuRegisterPortName;
+use crate::application::simulation::cpu_registers::{CpuRegisterPortName, CpuRegisterPortsData};
 
-pub struct CpuRegisterGridInfo{
-    grid_pos        : GridPos,
+
+
+#[derive(Clone, PartialEq, Debug, Eq, )]
+pub struct CpuRegisterPortsGridData {
+    pub input : PortGridDefns,
+    pub output: PortGridDefns,
 }
 
-impl CpuRegisterGridInfo {
-    pub fn grid_pos(&self) -> &GridPos{
-        &self.grid_pos
-    }
-    
-    pub fn new(pos: GridPos) -> Self {
-        Self {
-            grid_pos : pos,
+impl PortDataContainer<CpuRegisterPortName, PortGridDefns> for CpuRegisterPortsGridData {
+    fn get_for_port(&self, port_name: &CpuRegisterPortName) -> &PortGridDefns {
+        match port_name{
+            CpuRegisterPortName::Input => {&self.input}
+            CpuRegisterPortName::Output => {&self.output}
         }
     }
 }
 
-#[derive(Clone, PartialEq, Debug, Eq, )]
-pub struct CpuRegisterPortsGridInfo{
-    pub input : PortGridData,
-    pub output: PortGridData,
-}
-
-impl Index<CpuRegisterPortName> for CpuRegisterPortsGridInfo {
-    type Output = PortGridData; 
+impl Index<CpuRegisterPortName> for CpuRegisterPortsGridData {
+    type Output = PortGridDefns; 
 
     fn index(&self, index: CpuRegisterPortName) -> &Self::Output {
         match index{

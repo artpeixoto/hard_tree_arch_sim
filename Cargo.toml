@@ -16,10 +16,15 @@ palette = "0.7.6"
 structstruck = "0.5.0"
 wgpu = "25.0.2"
 
- [profile.dev.package."macroquad"]
+[profile.dev.package."macroquad"]
  opt-level = 3
  incremental = true
 
 [profile.release.package."macroquad"]
 opt-level = 3
 incremental = true
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 4

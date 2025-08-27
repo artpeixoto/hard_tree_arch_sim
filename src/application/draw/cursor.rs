@@ -1,7 +1,7 @@
 use HorOrVer::{Horizontal, Vertical};
 use crate::application::direction::{Direction, HorOrVer};
 use crate::application::draw::grid_to_screen::GridToScreenMapper;
-use crate::application::draw::port::PortDrawingData;
+use crate::application::draw::port::PortDrawingDefns;
 use crate::application::grid::pos::{grid_dist, grid_size, GridPos, GridSize};
 use crate::application::draw::pos::{dist, pos, Dist, Pos, ScreenUnit, Size};
 
@@ -70,7 +70,7 @@ impl RectCursor{
     pub fn moved_for_port(
         &self,
         port_dir            : Direction,
-        port_drawing_info   : &PortDrawingData
+        port_drawing_info   : &PortDrawingDefns
     ) -> Self {
         self.clone_apply_return(|this|  this.move_for_port(port_dir, port_drawing_info))
     }
@@ -112,7 +112,7 @@ impl RectCursor{
     pub fn move_for_port(
         &mut self,
         port_dir            : Direction,
-        port_drawing_info   : &PortDrawingData
+        port_drawing_info   : &PortDrawingDefns
     ) -> &mut Self {
         let port_len = port_drawing_info.full_len();
         match port_dir {

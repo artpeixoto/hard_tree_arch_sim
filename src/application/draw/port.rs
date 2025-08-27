@@ -7,15 +7,6 @@ use crate::application::draw::shapes::draw_line_pos;
 use crate::application::grid::{pos::GridPos};
 use crate::application::draw::pos::{Pos, ToFPosExt};
 
-pub fn port_grid_info(
-    pos      : GridPos,
-    direction: Direction,
-) -> PortGridData {
-    PortGridData {
-        position: pos,
-        direction,
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SignalType{
@@ -25,14 +16,13 @@ pub enum SignalType{
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct PortGridData {
+pub struct PortGridDefns {
     pub position    : GridPos,
     pub direction   : Direction,
-
 }
 
 
-pub struct PortDrawingData {
+pub struct PortDrawingDefns {
     pub base            : u32,
     pub arrow_height    : u32,
     pub line_len        : u32,
@@ -46,7 +36,7 @@ pub enum PortColorIndex{
     Active(SignalType, PortSignalDirection)
 }
 
-impl PortDrawingData {
+impl PortDrawingDefns {
     pub const fn full_len(&self) -> i32 {
         (self.line_len + self.arrow_height) as i32
     }
@@ -59,17 +49,16 @@ pub enum PortSignalDirection {
 }
 
 #[derive(Clone, Debug, PartialEq,  Eq )]
-pub struct PortData {
+pub struct PortDefns {
     pub active      : bool,
     pub signal_dir  : PortSignalDirection,
     pub signal_type : SignalType
 }
 
-
 pub fn draw_port(
-    port              : &PortData,
-    port_grid_info    : &PortGridData,
-    port_drawing_info : &PortDrawingData,
+    port              : &PortDefns,
+    port_grid_info    : &PortGridDefns,
+    port_drawing_info : &PortDrawingDefns,
     grid_to_screen    : &GridToScreenMapper,
 ) {
     let color = {

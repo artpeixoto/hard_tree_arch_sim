@@ -10,3 +10,4 @@ pub mod color;
 pub mod cursor;
 pub mod pos;
 pub mod component_bank;
+pub mod cpu;

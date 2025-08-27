@@ -1,3 +1,3 @@
-pub struct ComponentBank<C: Sized, const COMPONENT_COUNT: usize>{
-    pub components: Box<[C; COMPONENT_COUNT]> 
+pub struct ComponentBank<InnerComp: Sized, const COMPONENT_COUNT: usize>{
+    pub components: Box<[InnerComp; COMPONENT_COUNT]>
 }

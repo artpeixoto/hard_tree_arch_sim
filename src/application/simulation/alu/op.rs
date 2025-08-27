@@ -1,7 +1,5 @@
 use crate::application::simulation::cpu_registers::CpuRegisterAddress;
 
-pub type AluAddress = usize;
-pub const ALU_COUNT: usize = 32;
 #[derive(Clone, PartialEq, Eq, Debug, Copy)]
 pub enum MovInput {
     Source(CpuRegisterAddress),

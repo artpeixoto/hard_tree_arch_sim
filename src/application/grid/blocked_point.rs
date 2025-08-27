@@ -1,9 +1,9 @@
 use std::cmp::{max, min};
 use wgpu::naga::FastHashSet;
-use crate::application::grid::cpu_register::CpuRegisterGridInfo;
 use crate::application::grid::pos::{grid_dist, grid_pos, grid_size, GridPos, GridSize};
 use crate::application::grid::rect::{grid_rect, GridRect};
 
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct BlockedPoints (pub FastHashSet<GridPos>);
 impl BlockedPoints{
     pub fn new() -> Self{
@@ -25,7 +25,7 @@ impl BlockedPoints{
             }
         }
     }
-    pub fn add_from(&mut self, other: BlockedPoints){
+    pub fn add_from(&mut self, other: &BlockedPoints){
         self.0.extend(other.0.iter()); 
     }
     

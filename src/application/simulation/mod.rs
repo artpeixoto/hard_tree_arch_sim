@@ -4,5 +4,6 @@ pub mod instruction;
 pub mod controller;
 pub mod instruction_reader;
 pub mod main_memory;
-pub mod cpu;
+pub mod simulation;
 pub mod component_bank;
+pub mod memory_primitives;

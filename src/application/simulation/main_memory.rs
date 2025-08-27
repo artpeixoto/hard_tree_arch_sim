@@ -1,16 +1,16 @@
 use std::ops::Deref;
 use std::sync::{Arc, RwLock};
-use crate::memory_primitives::register::Register;
+use crate::application::simulation::memory_primitives::register::Register;
 use crate::{ Step};
 use crate::word::{Word};
 pub const MAIN_MEMORY_LEN: usize = 1024;
 
-type MainMemoryInner = Arc<RwLock<[Word; MAIN_MEMORY_LEN]>>;
+type MainMemoryInner = Arc<RwLock<Vec<Word>>>;
 pub struct MainMemory(MainMemoryInner);
 
 impl MainMemory{
-    pub fn new() -> Self{
-        MainMemory(Arc::new(RwLock::new([0;MAIN_MEMORY_LEN])))
+    pub fn new(content: Vec<Word>) -> Self{
+        MainMemory(Arc::new(RwLock::new(content)))
     }
 }
 
